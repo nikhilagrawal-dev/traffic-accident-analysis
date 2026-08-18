@@ -1,0 +1,178 @@
+{
+  "random_forest": [
+    {
+      "Feature": "Duration_Minutes",
+      "Importance": 0.12642632432596526
+    },
+    {
+      "Feature": "Distance(mi)",
+      "Importance": 0.10976222682491797
+    },
+    {
+      "Feature": "Start_Lng",
+      "Importance": 0.062468098148654186
+    },
+    {
+      "Feature": "Start_Lat",
+      "Importance": 0.05893667768770733
+    },
+    {
+      "Feature": "Local_Accident_Density",
+      "Importance": 0.049539401864824514
+    },
+    {
+      "Feature": "City",
+      "Importance": 0.04758203307059348
+    },
+    {
+      "Feature": "Pressure(in)",
+      "Importance": 0.04127871851673286
+    },
+    {
+      "Feature": "State",
+      "Importance": 0.0407214372513151
+    },
+    {
+      "Feature": "Distance_To_Cluster_Center",
+      "Importance": 0.0406026191147757
+    },
+    {
+      "Feature": "Hotspot_Label",
+      "Importance": 0.03439160500426695
+    },
+    {
+      "Feature": "Wind_Direction",
+      "Importance": 0.03307339017119432
+    },
+    {
+      "Feature": "Temperature(F)",
+      "Importance": 0.03243252990135066
+    },
+    {
+      "Feature": "Cluster_Size",
+      "Importance": 0.031381373999464376
+    },
+    {
+      "Feature": "Humidity(%)",
+      "Importance": 0.03094304998494745
+    },
+    {
+      "Feature": "Weather_Condition",
+      "Importance": 0.030929088273880922
+    },
+    {
+      "Feature": "Wind_Speed(mph)",
+      "Importance": 0.026321000213119353
+    },
+    {
+      "Feature": "Hour",
+      "Importance": 0.026123216533345914
+    },
+    {
+      "Feature": "Weekday",
+      "Importance": 0.01907136950868476
+    },
+    {
+      "Feature": "Month",
+      "Importance": 0.018955192352878333
+    },
+    {
+      "Feature": "Road_Complexity_Score",
+      "Importance": 0.014952636683470756
+    }
+  ],
+  "xgboost": [
+    {
+      "Feature": "Traffic_Signal",
+      "Importance": 0.1277436912059784
+    },
+    {
+      "Feature": "Hotspot_Flag",
+      "Importance": 0.07920056581497192
+    },
+    {
+      "Feature": "Crossing",
+      "Importance": 0.0705256536602974
+    },
+    {
+      "Feature": "Distance(mi)",
+      "Importance": 0.06291277706623077
+    },
+    {
+      "Feature": "Road_Complexity_Score",
+      "Importance": 0.04411514475941658
+    },
+    {
+      "Feature": "Junction",
+      "Importance": 0.03714516758918762
+    },
+    {
+      "Feature": "Duration_Minutes",
+      "Importance": 0.03678417578339577
+    },
+    {
+      "Feature": "Stop",
+      "Importance": 0.036311469972133636
+    },
+    {
+      "Feature": "State",
+      "Importance": 0.02818024531006813
+    },
+    {
+      "Feature": "Is_Night",
+      "Importance": 0.028129104524850845
+    },
+    {
+      "Feature": "Local_Accident_Density",
+      "Importance": 0.023508641868829727
+    },
+    {
+      "Feature": "Amenity",
+      "Importance": 0.023318273946642876
+    },
+    {
+      "Feature": "Season_Summer",
+      "Importance": 0.021438872441649437
+    },
+    {
+      "Feature": "Hotspot_Label",
+      "Importance": 0.02033696137368679
+    },
+    {
+      "Feature": "Cluster_Size",
+      "Importance": 0.01724589802324772
+    },
+    {
+      "Feature": "Station",
+      "Importance": 0.017041319981217384
+    },
+    {
+      "Feature": "Start_Lng",
+      "Importance": 0.016999585554003716
+    },
+    {
+      "Feature": "Railway",
+      "Importance": 0.01663868874311447
+    },
+    {
+      "Feature": "City",
+      "Importance": 0.015825461596250534
+    },
+    {
+      "Feature": "Season_Spring",
+      "Importance": 0.015723733231425285
+    }
+  ],
+  "top20_overlap_count": 9,
+  "top20_overlap_features": [
+    "City",
+    "Cluster_Size",
+    "Distance(mi)",
+    "Duration_Minutes",
+    "Hotspot_Label",
+    "Local_Accident_Density",
+    "Road_Complexity_Score",
+    "Start_Lng",
+    "State"
+  ]
+}

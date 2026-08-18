@@ -1,0 +1,38 @@
+{
+  "notebook_version": "08_SHAP_Explainability.ipynb",
+  "execution_timestamp": "2026-08-19 01:32:59",
+  "model_used": "XGBoost (Optimized)",
+  "model_class": "XGBClassifier",
+  "explainer_type": "TreeExplainer",
+  "sample_size": 3000,
+  "stratified_sample": true,
+  "feature_count": 53,
+  "class_count": 4,
+  "shap_calc_runtime_seconds": 1.569,
+  "shap_version": "0.52.0",
+  "top_10_shap_features": [
+    "Distance(mi)",
+    "Duration_Minutes",
+    "Month",
+    "Start_Lng",
+    "Start_Lat",
+    "Local_Accident_Density",
+    "City",
+    "Cluster_Size",
+    "Pressure(in)",
+    "State"
+  ],
+  "artifacts_created": [
+    "artifacts/shap_feature_importance.csv",
+    "artifacts/shap_class_importance.csv",
+    "artifacts/shap_summary_data.csv",
+    "artifacts/shap_metadata.json",
+    "artifacts/shap_beeswarm_summary.png",
+    "artifacts/shap_global_bar_plot.png",
+    "artifacts/shap_dependence_top5.png",
+    "artifacts/shap_waterfall_case1.png",
+    "artifacts/shap_waterfall_case2.png",
+    "artifacts/shap_waterfall_case3.png",
+    "artifacts/shap_multiclass_heatmap.png"
+  ]
+}
