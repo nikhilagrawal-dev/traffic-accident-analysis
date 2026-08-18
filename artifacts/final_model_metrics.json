@@ -1,0 +1,15 @@
+{
+  "model_name": "XGBoost (Optimized)",
+  "evaluation_timestamp": "2026-08-19 02:24:43",
+  "test_rows": 59928,
+  "feature_count": 53,
+  "metrics": {
+    "accuracy": 0.8761,
+    "balanced_accuracy": 0.5029,
+    "weighted_precision": 0.8659,
+    "weighted_recall": 0.8761,
+    "weighted_f1": 0.8658,
+    "macro_f1": 0.5621,
+    "log_loss": 0.3246
+  }
+}

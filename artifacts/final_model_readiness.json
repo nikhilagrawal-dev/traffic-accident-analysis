@@ -1,0 +1,11 @@
+{
+  "readiness_status": "Technically ready for controlled application integration",
+  "audit_checks_passed": 17,
+  "audit_checks_total": 17,
+  "disclosed_limitations": [
+    "Low Severity 1 recall (22.0%)",
+    "Low Severity 4 recall (18.9%)",
+    "Majority class bias toward Severity 2",
+    "Macro F1 (0.5621) below Weighted F1 (0.8658)"
+  ]
+}

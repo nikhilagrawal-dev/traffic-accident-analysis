@@ -1,0 +1,5 @@
+Severity Class,Support,Correct,Incorrect,% Misclassified,Precision,Recall,F1 Score,Most Common Misclassification
+Severity 1,518,114,404,77.99,0.7355,0.2201,0.3388,Severity 2 (368 cases)
+Severity 2,47690,45536,2154,4.52,0.9001,0.9548,0.9266,"Severity 3 (1,967 cases)"
+Severity 3,10116,6552,3564,35.23,0.7566,0.6477,0.6979,"Severity 2 (3,497 cases)"
+Severity 4,1604,303,1301,81.11,0.5816,0.1889,0.2852,"Severity 2 (1,191 cases)"
