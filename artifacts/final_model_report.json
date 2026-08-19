@@ -15,8 +15,8 @@
   "cv_5fold_mean": 0.8622,
   "cv_5fold_std": 0.0015,
   "training_time_from_metadata": null,
-  "prediction_time": 0.0809,
-  "validation_runtime": 0.1985,
+  "prediction_time": 0.0734,
+  "validation_runtime": 0.1729,
   "weakest_classes": [
     "Severity 1 (F1: 0.3388)",
     "Severity 4 (F1: 0.2852)"

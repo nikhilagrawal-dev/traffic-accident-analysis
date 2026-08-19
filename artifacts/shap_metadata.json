@@ -1,6 +1,6 @@
 {
   "notebook_version": "08_SHAP_Explainability.ipynb",
-  "execution_timestamp": "2026-08-19 01:32:59",
+  "execution_timestamp": "2026-08-19 17:47:42",
   "model_used": "XGBoost (Optimized)",
   "model_class": "XGBClassifier",
   "explainer_type": "TreeExplainer",
@@ -8,7 +8,7 @@
   "stratified_sample": true,
   "feature_count": 53,
   "class_count": 4,
-  "shap_calc_runtime_seconds": 1.569,
+  "shap_calc_runtime_seconds": 1.522,
   "shap_version": "0.52.0",
   "top_10_shap_features": [
     "Distance(mi)",
