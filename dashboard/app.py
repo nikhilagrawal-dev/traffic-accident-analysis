@@ -63,12 +63,13 @@ if filtered_df.empty:
     st.stop()
 
 # 7. Dashboard Main Content Tabs
-tab_map, tab_severity, tab_temporal, tab_weather, tab_infra = st.tabs([
+tab_map, tab_severity, tab_temporal, tab_weather, tab_infra, tab_predict = st.tabs([
     "🗺️ DBSCAN Hotspot Map",
     "📊 Severity Analytics",
     "⏰ Temporal Analytics",
     "🌤️ Weather Analytics",
-    "🛣️ Infrastructure Analytics"
+    "🛣️ Infrastructure Analytics",
+    "🤖 Severity Prediction"
 ])
 
 # --- TAB 1: Hotspot Map ---
@@ -151,3 +152,8 @@ with tab_infra:
     fig_infra = plot_road_infrastructure_analysis(filtered_df)
     if fig_infra:
         st.plotly_chart(fig_infra, use_container_width=True)
+
+# --- TAB 6: Severity Prediction ---
+with tab_predict:
+    from prediction import render_prediction_tab
+    render_prediction_tab()
