@@ -42,10 +42,13 @@ def render_sidebar_filters(df: pd.DataFrame) -> dict:
         else:
             available_cities = []
             
+        if "city_filter" in st.session_state:
+            st.session_state["city_filter"] = [c for c in st.session_state["city_filter"] if c in available_cities]
+            
         selected_cities = st.multiselect(
             "City / Cities",
             options=available_cities,
-            default=[],
+            key="city_filter",
             help="Leave empty to select all cities"
         )
 

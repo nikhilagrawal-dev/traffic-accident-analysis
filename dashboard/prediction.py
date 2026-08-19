@@ -176,6 +176,7 @@ def render_prediction_tab():
             st.markdown("**Environment**")
             weather = st.selectbox("Weather Condition", weather_conds, index=weather_conds.index("Clear") if "Clear" in weather_conds else 0)
             temp = st.number_input("Temperature (F)", value=75.0)
+            humidity = st.number_input("Humidity (%)", min_value=0.0, max_value=100.0, value=50.0)
             vis = st.number_input("Visibility (mi)", value=10.0)
             precip = st.number_input("Precipitation (in)", value=0.0)
             wind_spd = st.number_input("Wind Speed (mph)", value=5.0)
@@ -196,7 +197,7 @@ def render_prediction_tab():
     user_inputs = {
         "State": state, "City": city, "Start_Lat": lat, "Start_Lng": lng,
         "Month": month, "Weekday": weekday, "Hour": hour,
-        "Weather_Condition": weather, "Temperature(F)": temp, "Visibility(mi)": vis,
+        "Weather_Condition": weather, "Temperature(F)": temp, "Humidity(%)": humidity, "Visibility(mi)": vis,
         "Precipitation(in)": precip, "Wind_Speed(mph)": wind_spd, "Wind_Direction": wind_dir,
         "Pressure(in)": press,
         "Amenity": int(amenity), "Crossing": int(crossing), "Junction": int(junction),
