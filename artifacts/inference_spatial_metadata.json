@@ -1,0 +1,16 @@
+{
+  "train_rows": 239835,
+  "dbscan_eps_km": 0.5,
+  "dbscan_min_samples": 5,
+  "dbscan_metric": "haversine",
+  "coordinate_system": "radians (WGS84) for distance",
+  "distance_calculation": "haversine (earth radius = 6371.0088 km)",
+  "density_rounding_rule": "latitude and longitude rounded to 2 decimal places, concatenated with underscore",
+  "density_fallback": 0,
+  "spatial_assignment_threshold_km": 0.5,
+  "number_of_core_points": 134041,
+  "number_of_clusters": 7381,
+  "maximum_cluster_size": 4585,
+  "feature_schema_version": "leakage_free_final",
+  "model_version": "XGBoost (Optimized) - leakage_free"
+}

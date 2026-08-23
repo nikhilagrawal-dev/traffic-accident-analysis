@@ -1,0 +1,184 @@
+{
+  "training_timestamp": "2026-08-22 19:56:59",
+  "runtime_optimization_notes": {
+    "cross_validation_policy": "Confirmatory 5-fold CV run exactly once, on the CV-selected candidate only (Section 7)",
+    "search_budget": "RandomizedSearchCV: n_iter=6, cv=3 per model family (18 fits + 1 refit each)",
+    "baseline_rf_max_depth": 20
+  },
+  "test_set_discipline": {
+    "policy": "Test set used only once, after model selection was finalized using CV evidence",
+    "model_selection_criterion": "Highest cross-validation weighted F1",
+    "tie_break_threshold_f1": 0.005,
+    "tie_break_criteria_used": [
+      "CV F1 standard deviation",
+      "training time",
+      "model size"
+    ],
+    "selection_reason": "Higher CV F1 (weighted) by 0.0339, above the 0.005 near-tie threshold.",
+    "final_test_evaluation": "Performed once after model selection"
+  },
+  "random_forest": {
+    "baseline_params": {
+      "bootstrap": true,
+      "ccp_alpha": 0.0,
+      "class_weight": null,
+      "criterion": "gini",
+      "max_depth": 20,
+      "max_features": "sqrt",
+      "max_leaf_nodes": null,
+      "max_samples": null,
+      "min_impurity_decrease": 0.0,
+      "min_samples_leaf": 2,
+      "min_samples_split": 5,
+      "min_weight_fraction_leaf": 0.0,
+      "monotonic_cst": null,
+      "n_estimators": 100,
+      "n_jobs": -1,
+      "oob_score": false,
+      "random_state": 42,
+      "verbose": 0,
+      "warm_start": false
+    },
+    "tuned_params": {
+      "n_estimators": 150,
+      "min_samples_split": 5,
+      "min_samples_leaf": 2,
+      "max_features": "sqrt",
+      "max_depth": 20
+    },
+    "search_cv_best_score_f1_weighted": 0.8252,
+    "search_cv_std_f1_weighted": 0.0009,
+    "search_n_iter": 6,
+    "search_cv_folds": 3
+  },
+  "xgboost": {
+    "baseline_params": {
+      "objective": "multi:softprob",
+      "colsample_bytree": 1.0,
+      "eval_metric": "mlogloss",
+      "gamma": 0,
+      "learning_rate": 0.1,
+      "max_depth": 6,
+      "min_child_weight": null,
+      "n_estimators": 100,
+      "subsample": 1.0,
+      "num_class": 4
+    },
+    "tuned_params": {
+      "subsample": 0.9,
+      "n_estimators": 200,
+      "min_child_weight": 3,
+      "max_depth": 8,
+      "learning_rate": 0.2,
+      "gamma": 0.1,
+      "colsample_bytree": 1.0
+    },
+    "search_cv_best_score_f1_weighted": 0.8591,
+    "search_cv_std_f1_weighted": 0.0001,
+    "search_n_iter": 6,
+    "search_cv_folds": 3,
+    "severity_label_offset": 1
+  },
+  "comparison_table": [
+    {
+      "Model": "Random Forest (Baseline)",
+      "Role": "Baseline (fixed config, not a search candidate)",
+      "CV F1 (weighted)": 0.825,
+      "CV F1 Std": 0.0012,
+      "Test Accuracy": "--",
+      "Test Balanced Accuracy": "--",
+      "Test F1 (weighted)": "--",
+      "Test F1 (macro)": "--",
+      "Test Log Loss": "--",
+      "Train Time (s)": 4.692,
+      "Predict Time (s)": "--"
+    },
+    {
+      "Model": "XGBoost (Baseline)",
+      "Role": "Baseline (fixed config, not a search candidate)",
+      "CV F1 (weighted)": 0.8361,
+      "CV F1 Std": 0.0003,
+      "Test Accuracy": "--",
+      "Test Balanced Accuracy": "--",
+      "Test F1 (weighted)": "--",
+      "Test F1 (macro)": "--",
+      "Test Log Loss": "--",
+      "Train Time (s)": 2.104,
+      "Predict Time (s)": "--"
+    },
+    {
+      "Model": "Random Forest (Optimized)",
+      "Role": "Search candidate, not selected",
+      "CV F1 (weighted)": 0.8252,
+      "CV F1 Std": 0.0009,
+      "Test Accuracy": "--",
+      "Test Balanced Accuracy": "--",
+      "Test F1 (weighted)": "--",
+      "Test F1 (macro)": "--",
+      "Test Log Loss": "--",
+      "Train Time (s)": 7.789,
+      "Predict Time (s)": "--"
+    },
+    {
+      "Model": "XGBoost (Optimized)",
+      "Role": "SELECTED (via CV)",
+      "CV F1 (weighted)": 0.8591,
+      "CV F1 Std": 0.0001,
+      "Test Accuracy": 0.8731,
+      "Test Balanced Accuracy": 0.4954,
+      "Test F1 (weighted)": 0.8619,
+      "Test F1 (macro)": 0.5524,
+      "Test Log Loss": 0.3301,
+      "Train Time (s)": 5.197,
+      "Predict Time (s)": 0.089
+    }
+  ],
+  "generalization_table": [
+    {
+      "Model": "Random Forest (Baseline)",
+      "Train F1 (weighted)": 0.9226,
+      "CV F1 (weighted)": 0.825,
+      "Test F1 (weighted)": "--",
+      "Gap (Train - Test)": "--"
+    },
+    {
+      "Model": "XGBoost (Baseline)",
+      "Train F1 (weighted)": 0.8436,
+      "CV F1 (weighted)": 0.8361,
+      "Test F1 (weighted)": "--",
+      "Gap (Train - Test)": "--"
+    },
+    {
+      "Model": "Random Forest (Optimized)",
+      "Train F1 (weighted)": 0.9222,
+      "CV F1 (weighted)": 0.8252,
+      "Test F1 (weighted)": "--",
+      "Gap (Train - Test)": "--"
+    },
+    {
+      "Model": "XGBoost (Optimized)",
+      "Train F1 (weighted)": 0.9338,
+      "CV F1 (weighted)": 0.8591,
+      "Test F1 (weighted)": 0.8619,
+      "Gap (Train - Test)": 0.0719
+    }
+  ],
+  "confirmatory_cross_validation": {
+    "model_validated": "XGBoost (Optimized)",
+    "cv5_f1_weighted_mean": 0.8615,
+    "cv5_f1_weighted_std": 0.0007,
+    "cv5_scores_per_fold": [
+      0.8609,
+      0.8619,
+      0.8617,
+      0.8625,
+      0.8604
+    ]
+  },
+  "recommendation": {
+    "best_model": "XGBoost (Optimized)",
+    "criterion": "Highest cross-validation weighted F1 (search evidence, not test-set metrics)",
+    "final_test_f1_weighted": 0.8619,
+    "final_test_balanced_accuracy": 0.4954
+  }
+}

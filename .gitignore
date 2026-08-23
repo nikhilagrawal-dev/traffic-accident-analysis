@@ -7,3 +7,21 @@ __pycache__/
 # Large ML artifacts
 models/*.pkl
 artifacts/*.csv
+data/*.csv
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Jupyter / notebook runtime
+.jupyter_home/
+.ipynb_checkpoints/
+
+# Generated evidence / screenshots
+evidence/
+
+# Temporary analysis/debug files
+*.txt
+
+# External validation datasets
+external_data/

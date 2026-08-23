@@ -1,0 +1,166 @@
+{
+  "dataset_shape": {
+    "train": [
+      239835,
+      52
+    ],
+    "test": [
+      59959,
+      52
+    ]
+  },
+  "feature_count": 52,
+  "selected_model": "XGBoost (Optimized)",
+  "selection_criterion": "Highest cross-validation weighted F1",
+  "cv_score": 0.8583,
+  "confirmatory_cv_score": "0.8613 \u00b1 0.0008",
+  "test_metrics": {
+    "Random Forest (Optimized)": {
+      "Model": "Random Forest (Optimized)",
+      "Accuracy": 0.8508311140034708,
+      "Balanced Accuracy": 0.3857859871786524,
+      "Macro Precision": 0.6970724887309998,
+      "Weighted Precision": 0.8402517042531983,
+      "Macro Recall": 0.3857859871786524,
+      "Weighted Recall": 0.8508311140034708,
+      "Macro F1": 0.42441006509618034,
+      "Weighted F1": 0.8262828690647895,
+      "Log Loss": 0.38417551000624
+    },
+    "XGBoost (Optimized)": {
+      "Model": "XGBoost (Optimized)",
+      "Accuracy": 0.8730966160209477,
+      "Balanced Accuracy": 0.4953629768012874,
+      "Macro Precision": 0.7010611362275423,
+      "Weighted Precision": 0.8611310841427193,
+      "Macro Recall": 0.4953629768012874,
+      "Weighted Recall": 0.8730966160209477,
+      "Macro F1": 0.552424446984946,
+      "Weighted F1": 0.8619168012606817,
+      "Log Loss": 0.3301386833190918
+    }
+  },
+  "per_class_metrics": {
+    "1": {
+      "precision": 0.6043956043956044,
+      "recall": 0.21235521235521235,
+      "f1-score": 0.3142857142857143,
+      "support": 518.0
+    },
+    "2": {
+      "precision": 0.8948192818263696,
+      "recall": 0.9577317211173746,
+      "f1-score": 0.9252072515259179,
+      "support": 47719.0
+    },
+    "3": {
+      "precision": 0.7665681202266568,
+      "recall": 0.615103291489572,
+      "f1-score": 0.6825335892514396,
+      "support": 10117.0
+    },
+    "4": {
+      "precision": 0.5384615384615384,
+      "recall": 0.19626168224299065,
+      "f1-score": 0.2876712328767123,
+      "support": 1605.0
+    },
+    "accuracy": 0.8730966160209477,
+    "macro avg": {
+      "precision": 0.7010611362275423,
+      "recall": 0.4953629768012874,
+      "f1-score": 0.552424446984946,
+      "support": 59959.0
+    },
+    "weighted avg": {
+      "precision": 0.8611310841427193,
+      "recall": 0.8730966160209477,
+      "f1-score": 0.8619168012606817,
+      "support": 59959.0
+    }
+  },
+  "shap_sample_size": 5000,
+  "top_shap_features": [
+    {
+      "Feature": "Distance(mi)",
+      "Mean_Absolute_SHAP": 0.8656026124954224
+    },
+    {
+      "Feature": "Duration_Minutes",
+      "Mean_Absolute_SHAP": 0.605327308177948
+    },
+    {
+      "Feature": "Month",
+      "Mean_Absolute_SHAP": 0.2890709340572357
+    },
+    {
+      "Feature": "Start_Lng",
+      "Mean_Absolute_SHAP": 0.18724903464317322
+    },
+    {
+      "Feature": "Start_Lat",
+      "Mean_Absolute_SHAP": 0.17590105533599854
+    },
+    {
+      "Feature": "Cluster_Size",
+      "Mean_Absolute_SHAP": 0.16915647685527802
+    },
+    {
+      "Feature": "Local_Accident_Density",
+      "Mean_Absolute_SHAP": 0.16701504588127136
+    },
+    {
+      "Feature": "City",
+      "Mean_Absolute_SHAP": 0.16507317125797272
+    },
+    {
+      "Feature": "State",
+      "Mean_Absolute_SHAP": 0.14149221777915955
+    },
+    {
+      "Feature": "Pressure(in)",
+      "Mean_Absolute_SHAP": 0.12954890727996826
+    },
+    {
+      "Feature": "Hour",
+      "Mean_Absolute_SHAP": 0.11878275126218796
+    },
+    {
+      "Feature": "Temperature(F)",
+      "Mean_Absolute_SHAP": 0.1085476353764534
+    },
+    {
+      "Feature": "Distance_To_Cluster_Center",
+      "Mean_Absolute_SHAP": 0.08376868814229965
+    },
+    {
+      "Feature": "Wind_Direction",
+      "Mean_Absolute_SHAP": 0.08367186039686203
+    },
+    {
+      "Feature": "Weather_Condition",
+      "Mean_Absolute_SHAP": 0.08343087881803513
+    },
+    {
+      "Feature": "Wind_Speed(mph)",
+      "Mean_Absolute_SHAP": 0.07955695688724518
+    },
+    {
+      "Feature": "Weekday",
+      "Mean_Absolute_SHAP": 0.07496966421604156
+    },
+    {
+      "Feature": "Humidity(%)",
+      "Mean_Absolute_SHAP": 0.06216546520590782
+    },
+    {
+      "Feature": "Road_Complexity_Score",
+      "Mean_Absolute_SHAP": 0.05316530168056488
+    },
+    {
+      "Feature": "Season_Spring",
+      "Mean_Absolute_SHAP": 0.0523354597389698
+    }
+  ],
+  "leakage_checks": "PASS"
+}

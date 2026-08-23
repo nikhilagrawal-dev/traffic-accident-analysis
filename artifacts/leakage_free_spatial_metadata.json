@@ -1,0 +1,16 @@
+{
+  "eps_km": 0.5,
+  "min_samples": 5,
+  "random_state": 42,
+  "test_size": 0.2,
+  "train_rows": 239835,
+  "test_rows": 59959,
+  "train_clusters": 7381,
+  "train_noise_rows": 93572,
+  "train_noise_pct": 39.01515625325745,
+  "train_core_points": 134041,
+  "hotspot_label_removed_from_model": true,
+  "local_density_fit_on": "train_only",
+  "dbscan_fit_on": "train_only",
+  "test_hotspot_assignment": "nearest_train_core_within_eps"
+}

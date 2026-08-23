@@ -1,0 +1,69 @@
+{
+  "Random Forest (Baseline)": {
+    "model_name": "Random Forest (Baseline)",
+    "train_time_sec": 4.692,
+    "cv_f1_weighted_mean": 0.825,
+    "cv_f1_weighted_std": 0.0012,
+    "cv_folds": 3,
+    "model_size_kb": 271128.3
+  },
+  "XGBoost (Baseline)": {
+    "model_name": "XGBoost (Baseline)",
+    "train_time_sec": 2.104,
+    "cv_f1_weighted_mean": 0.8361,
+    "cv_f1_weighted_std": 0.0003,
+    "cv_folds": 3,
+    "model_size_kb": 1690.6
+  },
+  "Random Forest (Optimized)": {
+    "model_name": "Random Forest (Optimized)",
+    "cv_f1_weighted_mean": 0.8252,
+    "cv_f1_weighted_std": 0.0009,
+    "train_time_sec": 7.789,
+    "model_size_kb": 403030.3,
+    "best_params": {
+      "n_estimators": 150,
+      "min_samples_split": 5,
+      "min_samples_leaf": 2,
+      "max_features": "sqrt",
+      "max_depth": 20
+    }
+  },
+  "XGBoost (Optimized)": {
+    "model_name": "XGBoost (Optimized)",
+    "cv_f1_weighted_mean": 0.8591,
+    "cv_f1_weighted_std": 0.0001,
+    "train_time_sec": 5.197,
+    "model_size_kb": 6990.9,
+    "best_params": {
+      "subsample": 0.9,
+      "n_estimators": 200,
+      "min_child_weight": 3,
+      "max_depth": 8,
+      "learning_rate": 0.2,
+      "gamma": 0.1,
+      "colsample_bytree": 1.0
+    },
+    "cv5_f1_weighted_mean": 0.8615,
+    "cv5_f1_weighted_std": 0.0007,
+    "cv5_scores": [
+      0.8609,
+      0.8619,
+      0.8617,
+      0.8625,
+      0.8604
+    ]
+  },
+  "final_held_out_test_performance": {
+    "model_name": "XGBoost (Optimized) -- Final Held-Out Test Performance",
+    "train_time_sec": 5.197,
+    "predict_time_sec": 0.089,
+    "accuracy": 0.8731,
+    "balanced_accuracy": 0.4954,
+    "precision_weighted": 0.8611,
+    "recall_weighted": 0.8731,
+    "f1_weighted": 0.8619,
+    "f1_macro": 0.5524,
+    "log_loss": 0.3301
+  }
+}
