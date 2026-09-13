@@ -14,11 +14,16 @@ leakage-free inference pipeline (inference.py / feature_list_leakage_free.json).
 No model code is modified here.
 """
 
-import httpx
+import asyncio
 import datetime
 import json
+import random
+import time
+from email.utils import parsedate_to_datetime
 import pytz
 from pathlib import Path
+
+import httpx
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 with open(PROJECT_ROOT / "artifacts" / "feature_list_leakage_free.json", "r") as _f:
@@ -29,6 +34,71 @@ NON_SPATIAL_FEATURES = [
     if f not in _FEATURE_SCHEMA["spatial_features"]
 ]
 assert len(NON_SPATIAL_FEATURES) == 47, f"Expected 47 non-spatial features, got {len(NON_SPATIAL_FEATURES)}"
+
+OPEN_METEO_HEADERS = {
+    "User-Agent": (
+        "traffic-accident-analysis/1.0 "
+        "(+https://github.com/nikhilagrawal-dev/traffic-accident-analysis)"
+    )
+}
+REQUEST_TIMEOUT_SECONDS = 10.0
+GEOCODING_CACHE_TTL_SECONDS = 24 * 60 * 60
+WEATHER_CACHE_TTL_SECONDS = 60
+
+# Each Render process maintains its own small, in-memory cache. Weather entries
+# are deliberately short-lived so predictions continue to use live conditions.
+_geocoding_cache: dict[str, tuple[float, tuple[float, float, str, str, str]]] = {}
+_weather_cache: dict[tuple[float, float], tuple[float, dict]] = {}
+
+
+def _get_cached(cache: dict, key: object, ttl_seconds: float):
+    entry = cache.get(key)
+    if entry is None:
+        return None
+    cached_at, value = entry
+    if time.monotonic() - cached_at >= ttl_seconds:
+        del cache[key]
+        return None
+    return value
+
+
+def _retry_delay(response: httpx.Response | None = None) -> float:
+    """Use provider guidance for 429s, otherwise a short jittered backoff."""
+    if response is not None:
+        retry_after = response.headers.get("Retry-After")
+        if retry_after:
+            try:
+                return max(0.0, float(retry_after))
+            except ValueError:
+                try:
+                    retry_at = parsedate_to_datetime(retry_after)
+                    return max(0.0, (retry_at - datetime.datetime.now(retry_at.tzinfo)).total_seconds())
+                except (TypeError, ValueError):
+                    pass
+    return 0.25 + random.uniform(0.0, 0.25)
+
+
+async def _get_json_with_retry(url: str) -> dict:
+    """GET Open-Meteo JSON with one retry for rate-limit/transient failures."""
+    async with httpx.AsyncClient(
+        timeout=REQUEST_TIMEOUT_SECONDS,
+        headers=OPEN_METEO_HEADERS,
+    ) as client:
+        for attempt in range(2):
+            try:
+                response = await client.get(url)
+                should_retry = response.status_code == 429 or 500 <= response.status_code < 600
+                if should_retry and attempt == 0:
+                    await asyncio.sleep(_retry_delay(response))
+                    continue
+                response.raise_for_status()
+                return response.json()
+            except httpx.RequestError:
+                if attempt == 1:
+                    raise
+                await asyncio.sleep(_retry_delay())
+
+    raise RuntimeError("Open-Meteo request retry loop exited unexpectedly.")
 
 # ---------------------------------------------------------------------------
 # Standard Road Scenario Defaults
@@ -125,11 +195,13 @@ async def fetch_city_data(city_name: str):
     Returns: (lat, lng, state, timezone_str, city_resolved)
     Raises ValueError for unknown/ambiguous city.
     """
+    cache_key = city_name.strip().casefold()
+    cached = _get_cached(_geocoding_cache, cache_key, GEOCODING_CACHE_TTL_SECONDS)
+    if cached is not None:
+        return cached
+
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1"
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        data = resp.json()
+    data = await _get_json_with_retry(url)
 
     if "results" not in data or len(data["results"]) == 0:
         raise ValueError(
@@ -143,7 +215,9 @@ async def fetch_city_data(city_name: str):
     state = r.get("admin1") or r.get("country", "")
     timezone_str = r.get("timezone", "UTC")
     city_resolved = r.get("name", city_name)
-    return lat, lng, state, timezone_str, city_resolved
+    result = (lat, lng, state, timezone_str, city_resolved)
+    _geocoding_cache[cache_key] = (time.monotonic(), result)
+    return result
 
 
 async def fetch_weather_data(lat: float, lng: float) -> dict:
@@ -162,6 +236,11 @@ async def fetch_weather_data(lat: float, lng: float) -> dict:
       weather_code        WMO → Weather_Condition   str   (WMO_CODE_MAP)
       is_day              0/1 → Is_Night            0/1   (inverted)
     """
+    cache_key = (float(lat), float(lng))
+    cached = _get_cached(_weather_cache, cache_key, WEATHER_CACHE_TTL_SECONDS)
+    if cached is not None:
+        return cached.copy()
+
     url = (
         f"https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lng}"
@@ -169,10 +248,7 @@ async def fetch_weather_data(lat: float, lng: float) -> dict:
         f"weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,is_day"
         f"&hourly=visibility&forecast_days=1"
     )
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        data = resp.json()
+    data = await _get_json_with_retry(url)
 
     current = data["current"]
     hourly  = data.get("hourly", {})
@@ -194,7 +270,7 @@ async def fetch_weather_data(lat: float, lng: float) -> dict:
     weather_cond = WMO_CODE_MAP.get(wmo_code, "Clear")
     is_night    = 0 if current["is_day"] == 1 else 1
 
-    return {
+    result = {
         "Temperature(F)":   temp_f,
         "Humidity(%)":      humidity,
         "Pressure(in)":     pressure_in,
@@ -205,6 +281,8 @@ async def fetch_weather_data(lat: float, lng: float) -> dict:
         "Weather_Condition": weather_cond,
         "Is_Night":         is_night,
     }
+    _weather_cache[cache_key] = (time.monotonic(), result)
+    return result.copy()
 
 
 def derive_time_features(dt: datetime.datetime) -> dict:
