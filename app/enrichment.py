@@ -13,7 +13,7 @@ leakage-free inference pipeline (inference.py / feature_list_leakage_free.json).
 
 No model code is modified here.
 """
-
+import os 
 import asyncio
 import datetime
 import json
@@ -35,7 +35,7 @@ NON_SPATIAL_FEATURES = [
 ]
 assert len(NON_SPATIAL_FEATURES) == 47, f"Expected 47 non-spatial features, got {len(NON_SPATIAL_FEATURES)}"
 
-OPEN_METEO_HEADERS = {
+WEATHER_HEADERS = {
     "User-Agent": (
         "traffic-accident-analysis/1.0 "
         "(+https://github.com/nikhilagrawal-dev/traffic-accident-analysis)"
@@ -79,26 +79,34 @@ def _retry_delay(response: httpx.Response | None = None) -> float:
 
 
 async def _get_json_with_retry(url: str) -> dict:
-    """GET Open-Meteo JSON with one retry for rate-limit/transient failures."""
+    """GET JSON from the weather/geocoding provider with one bounded retry."""
     async with httpx.AsyncClient(
         timeout=REQUEST_TIMEOUT_SECONDS,
-        headers=OPEN_METEO_HEADERS,
+        headers=WEATHER_HEADERS,
     ) as client:
         for attempt in range(2):
             try:
                 response = await client.get(url)
-                should_retry = response.status_code == 429 or 500 <= response.status_code < 600
+
+                should_retry = (
+                    response.status_code == 429
+                    or 500 <= response.status_code < 600
+                )
+
                 if should_retry and attempt == 0:
                     await asyncio.sleep(_retry_delay(response))
                     continue
+
                 response.raise_for_status()
                 return response.json()
+
             except httpx.RequestError:
                 if attempt == 1:
                     raise
                 await asyncio.sleep(_retry_delay())
 
-    raise RuntimeError("Open-Meteo request retry loop exited unexpectedly.")
+    raise RuntimeError("Weather/geocoding request retry loop exited unexpectedly.")
+
 
 # ---------------------------------------------------------------------------
 # Standard Road Scenario Defaults
@@ -222,68 +230,184 @@ async def fetch_city_data(city_name: str):
 
 async def fetch_weather_data(lat: float, lng: float) -> dict:
     """
-    Fetch current weather from Open-Meteo and return a dict with the exact
+    Fetch current weather from OpenWeather and return the exact
     feature keys and units required by the inference pipeline.
 
-    Unit conversions:
-      temperature_2m      °C  → Temperature(F)     °F    (×9/5 + 32)
-      relative_humidity_2m %  → Humidity(%)         %     (direct)
-      surface_pressure    hPa → Pressure(in)        inHg  (×0.02953)
-      visibility          m   → Visibility(mi)      mi    (÷1609.34)
-      wind_speed_10m      km/h→ Wind_Speed(mph)     mph   (÷1.60934)
-      wind_direction_10m  °   → Wind_Direction      label (compass)
-      precipitation       mm  → Precipitation(in)  in    (÷25.4)
-      weather_code        WMO → Weather_Condition   str   (WMO_CODE_MAP)
-      is_day              0/1 → Is_Night            0/1   (inverted)
+    OpenWeather with units=imperial provides:
+      temperature  -> °F
+      humidity     -> %
+      pressure     -> hPa
+      visibility   -> meters
+      wind speed   -> mph
+      wind degree  -> compass direction
+      rain/snow    -> mm for the last hour
+      weather      -> condition category
+      dt/sunrise/sunset -> Unix timestamps
     """
+
     cache_key = (float(lat), float(lng))
-    cached = _get_cached(_weather_cache, cache_key, WEATHER_CACHE_TTL_SECONDS)
+
+    cached = _get_cached(
+        _weather_cache,
+        cache_key,
+        WEATHER_CACHE_TTL_SECONDS,
+    )
+
     if cached is not None:
         return cached.copy()
 
+    api_key = os.getenv("OPENWEATHER_API_KEY")
+
+    if not api_key:
+        raise RuntimeError(
+            "OPENWEATHER_API_KEY is not configured."
+        )
+
     url = (
-        f"https://api.open-meteo.com/v1/forecast"
-        f"?latitude={lat}&longitude={lng}"
-        f"&current=temperature_2m,relative_humidity_2m,precipitation,"
-        f"weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,is_day"
-        f"&hourly=visibility&forecast_days=1"
+        "https://api.openweathermap.org/data/2.5/weather"
+        f"?lat={lat}"
+        f"&lon={lng}"
+        "&units=imperial"
+        f"&appid={api_key}"
     )
+
     data = await _get_json_with_retry(url)
 
-    current = data["current"]
-    hourly  = data.get("hourly", {})
+    main = data["main"]
+    wind = data.get("wind", {})
+    weather = data.get("weather", [{}])[0]
 
-    # Visibility: first hourly value (m) or 10000 m default (≈6.2 mi)
-    vis_m = 10000.0
-    vis_list = hourly.get("visibility", [])
-    if vis_list and vis_list[0] is not None:
-        vis_m = float(vis_list[0])
+    # ------------------------------------------------------------------
+    # Basic weather values
+    # ------------------------------------------------------------------
 
-    temp_f      = (float(current["temperature_2m"]) * 9 / 5) + 32
-    humidity    = float(current["relative_humidity_2m"])
-    pressure_in = float(current["surface_pressure"]) * 0.02953
-    vis_mi      = vis_m / 1609.34
-    wind_mph    = float(current["wind_speed_10m"]) / 1.60934
-    precip_in   = float(current["precipitation"]) / 25.4
-    wind_dir    = _wind_degrees_to_label(float(current["wind_direction_10m"]))
-    wmo_code    = int(current["weather_code"])
-    weather_cond = WMO_CODE_MAP.get(wmo_code, "Clear")
-    is_night    = 0 if current["is_day"] == 1 else 1
+    temp_f = float(main["temp"])
+
+    humidity = float(main["humidity"])
+
+    # OpenWeather pressure is hPa.
+    # Model expects inches of mercury.
+    pressure_in = float(main["pressure"]) * 0.02953
+
+    # OpenWeather visibility is meters.
+    # Model expects miles.
+    vis_m = float(data.get("visibility", 10000.0))
+    vis_mi = vis_m / 1609.34
+
+    # units=imperial gives wind speed in mph.
+    wind_mph = float(wind.get("speed", 0.0))
+
+    # ------------------------------------------------------------------
+    # Precipitation
+    # ------------------------------------------------------------------
+
+    rain_mm = float(
+        data.get("rain", {}).get("1h", 0.0)
+    )
+
+    snow_mm = float(
+        data.get("snow", {}).get("1h", 0.0)
+    )
+
+    # Convert mm → inches.
+    precip_in = (rain_mm + snow_mm) / 25.4
+
+    # ------------------------------------------------------------------
+    # Wind direction
+    # ------------------------------------------------------------------
+
+    wind_deg = float(wind.get("deg", 0.0))
+
+    wind_dir = _wind_degrees_to_label(wind_deg)
+
+     # ------------------------------------------------------------------
+    # Weather condition
+    # ------------------------------------------------------------------
+
+    weather_main = str(
+        weather.get("main", "Clear")
+    ).strip().lower()
+
+    weather_description = str(
+        weather.get("description", "")
+    ).strip().lower()
+
+    if weather_main == "clear":
+        weather_cond = "Clear"
+
+    elif weather_main == "clouds":
+        weather_cond = "Cloudy"
+
+    elif weather_main in {
+        "mist",
+        "fog",
+        "haze",
+        "smoke",
+        "dust",
+        "sand",
+        "ash",
+    }:
+        weather_cond = "Fog"
+
+    elif weather_main == "drizzle":
+        weather_cond = "Light Drizzle"
+
+    elif weather_main == "rain":
+        if "light" in weather_description:
+            weather_cond = "Light Rain"
+        elif "heavy" in weather_description:
+            weather_cond = "Heavy Rain"
+        else:
+            weather_cond = "Rain"
+
+    elif weather_main == "thunderstorm":
+        weather_cond = "T-Storm"
+
+    elif weather_main == "snow":
+        if "light" in weather_description:
+            weather_cond = "Light Snow"
+        else:
+            weather_cond = "Snow"
+
+    else:
+        weather_cond = "Clear"
+    # ------------------------------------------------------------------
+    # Day / night
+    # ------------------------------------------------------------------
+
+    current_ts = int(data["dt"])
+    sunrise_ts = int(data["sys"]["sunrise"])
+    sunset_ts = int(data["sys"]["sunset"])
+
+    is_night = (
+        1
+        if current_ts < sunrise_ts or current_ts >= sunset_ts
+        else 0
+    )
+
+    # ------------------------------------------------------------------
+    # Exact model feature dictionary
+    # ------------------------------------------------------------------
 
     result = {
-        "Temperature(F)":   temp_f,
-        "Humidity(%)":      humidity,
-        "Pressure(in)":     pressure_in,
-        "Visibility(mi)":   vis_mi,
-        "Wind_Speed(mph)":  wind_mph,
+        "Temperature(F)": temp_f,
+        "Humidity(%)": humidity,
+        "Pressure(in)": pressure_in,
+        "Visibility(mi)": vis_mi,
+        "Wind_Speed(mph)": wind_mph,
         "Precipitation(in)": precip_in,
-        "Wind_Direction":   wind_dir,
+        "Wind_Direction": wind_dir,
         "Weather_Condition": weather_cond,
-        "Is_Night":         is_night,
+        "Is_Night": is_night,
     }
-    _weather_cache[cache_key] = (time.monotonic(), result)
-    return result.copy()
 
+    # 60-second live-weather cache.
+    _weather_cache[cache_key] = (
+        time.monotonic(),
+        result,
+    )
+
+    return result.copy()
 
 def derive_time_features(dt: datetime.datetime) -> dict:
     """

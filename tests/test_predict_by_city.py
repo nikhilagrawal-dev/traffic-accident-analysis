@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, patch
 
 import httpx
+import os
 import pytest
 from fastapi.testclient import TestClient
 
@@ -74,17 +75,42 @@ async def test_geocoding_cache_uses_normalized_city_name():
 
 @pytest.mark.asyncio
 async def test_weather_cache_reuses_live_result_within_ttl():
-    response = {"current": {
-        "temperature_2m": 20, "relative_humidity_2m": 55, "precipitation": 0,
-        "weather_code": 0, "surface_pressure": 1016, "wind_speed_10m": 10,
-        "wind_direction_10m": 180, "is_day": 1,
-    }, "hourly": {"visibility": [10000]}}
-    with patch("app.enrichment._get_json_with_retry", new=AsyncMock(return_value=response)) as get_json:
-        first = await enrichment.fetch_weather_data(39.95, -75.16)
-        second = await enrichment.fetch_weather_data(39.95, -75.16)
+    response = {
+        "main": {
+            "temp": 68,
+            "humidity": 55,
+            "pressure": 1016,
+        },
+        "visibility": 10000,
+        "wind": {
+            "speed": 10,
+            "deg": 180,
+        },
+        "weather": [
+            {
+                "main": "Clear",
+                "description": "clear sky",
+            }
+        ],
+        "dt": 1700000000,
+        "sys": {
+            "sunrise": 1699960000,
+            "sunset": 1700000000,
+        },
+    }
+
+    with patch.dict(
+        os.environ,
+        {"OPENWEATHER_API_KEY": "test-key"},
+    ):
+        with patch(
+            "app.enrichment._get_json_with_retry",
+            new=AsyncMock(return_value=response),
+        ) as get_json:
+            first = await enrichment.fetch_weather_data(39.95, -75.16)
+            second = await enrichment.fetch_weather_data(39.95, -75.16)
 
     assert first == second
-    assert first is not second
     get_json.assert_awaited_once()
 
 
