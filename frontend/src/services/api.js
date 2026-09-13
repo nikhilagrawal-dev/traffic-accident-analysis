@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-export const api = axios.create({
-  baseURL: API_BASE_URL,
+const api = axios.create({
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -14,7 +14,7 @@ export const checkHealth = async () => {
     const response = await api.get('/health');
     return response.data;
   } catch (error) {
-    throw error;
+    throw new Error('Health check failed');
   }
 };
 
@@ -23,6 +23,21 @@ export const predictSeverity = async (data) => {
     const response = await api.post('/predict', data);
     return response.data;
   } catch (error) {
-    throw error;
+    if (error.response) {
+      throw new Error(error.response.data.detail || 'Prediction failed');
+    }
+    throw new Error('Network error or server is down');
+  }
+};
+
+export const predictByCity = async (data) => {
+  try {
+    const response = await api.post('/predict-by-city', data);
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.detail || 'Prediction failed');
+    }
+    throw new Error('Network error or server is down');
   }
 };

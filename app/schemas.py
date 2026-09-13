@@ -71,6 +71,30 @@ class PredictionRequest(BaseModel):
     
     model_config = ConfigDict(populate_by_name=True)
 
+class AdvancedOptions(BaseModel):
+    Duration_Minutes: Optional[float] = None
+    Distance_mi_: Optional[float] = Field(None, alias="Distance(mi)")
+    Amenity: Optional[int] = None
+    Crossing: Optional[int] = None
+    Junction: Optional[int] = None
+    Railway: Optional[int] = None
+    Station: Optional[int] = None
+    Stop: Optional[int] = None
+    Traffic_Signal: Optional[int] = None
+    Lighting_Night: Optional[int] = None
+    
+    # Scenario overrides
+    Hour: Optional[int] = None
+    Weekday: Optional[int] = None
+    Month: Optional[int] = None
+    
+    model_config = ConfigDict(populate_by_name=True)
+
+class CityPredictionRequest(BaseModel):
+    city: str
+    advanced_options: Optional[AdvancedOptions] = None
+    explain: bool = False
+
 class SpatialInformation(BaseModel):
     local_accident_density: int
     hotspot_flag: int
@@ -78,8 +102,20 @@ class SpatialInformation(BaseModel):
     cluster_size: int
     distance_to_cluster_center_km: float
 
+class WeatherContext(BaseModel):
+    temperature_f: float
+    humidity_percent: float
+    condition: str
+    wind_speed_mph: float
+
 class PredictionResponse(BaseModel):
     predicted_severity: int
     probabilities: Dict[str, float]
     spatial_information: SpatialInformation
     shap_explanation: Optional[Dict] = None
+
+class CityPredictionResponse(PredictionResponse):
+    city_resolved: str
+    state_resolved: str
+    local_time: str
+    weather_context: WeatherContext

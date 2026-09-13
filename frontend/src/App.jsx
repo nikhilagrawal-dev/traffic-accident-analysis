@@ -13,7 +13,7 @@ import SHAPExplanation from './components/SHAPExplanation';
 import ModelIntelligenceSection from './components/ModelIntelligenceSection';
 import ValidationSection from './components/ValidationSection';
 import SystemStatus from './components/SystemStatus';
-import { checkHealth, predictSeverity } from './services/api';
+import { checkHealth, predictSeverity, predictByCity } from './services/api';
 import { LayoutDashboard } from 'lucide-react';
 
 function App() {
@@ -39,7 +39,7 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const prediction = await predictSeverity(formData);
+      const prediction = await predictByCity(formData);
       setResult(prediction);
       
       // Scroll to results smoothly
@@ -76,9 +76,13 @@ function App() {
         <section id="analyze" className="py-24 bg-slate-100 border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Analyze an Accident</h2>
+              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Analyze Accident Severity</h2>
               <p className="mt-4 text-lg text-slate-600 leading-relaxed">
-                Step through the guided workflow to compile an environmental and infrastructure profile. Spatial data will be derived automatically.
+                Enter a city. The system will automatically resolve the location, fetch live conditions,
+                and estimate accident severity under current context.
+              </p>
+              <p className="mt-2 text-sm text-slate-400 italic">
+                Estimated severity under current conditions — based on historical accident patterns, not a guaranteed future prediction.
               </p>
             </div>
 
