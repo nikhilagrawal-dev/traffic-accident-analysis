@@ -16,7 +16,19 @@ No model code is modified here.
 
 import httpx
 import datetime
+import json
 import pytz
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+with open(PROJECT_ROOT / "artifacts" / "feature_list_leakage_free.json", "r") as _f:
+    _FEATURE_SCHEMA = json.load(_f)
+
+NON_SPATIAL_FEATURES = [
+    f for f in _FEATURE_SCHEMA["all_features"]
+    if f not in _FEATURE_SCHEMA["spatial_features"]
+]
+assert len(NON_SPATIAL_FEATURES) == 47, f"Expected 47 non-spatial features, got {len(NON_SPATIAL_FEATURES)}"
 
 # ---------------------------------------------------------------------------
 # Standard Road Scenario Defaults
@@ -40,6 +52,11 @@ import pytz
 # LIMITATION: All defaults assume a non-complex, standard road segment.
 #             The system does NOT know the actual road infrastructure.
 #             Advanced Options allow the user to override these values.
+#
+# COORDINATE LIMITATION: Open-Meteo geocoding returns representative
+# city-center coordinates, NOT an exact accident-road location. Spatial
+# features (hotspot density, cluster assignment) are therefore approximate
+# at the city level rather than street-level precision.
 # ---------------------------------------------------------------------------
 DEFAULTS = {
     "Distance(mi)": 0.03,
@@ -105,7 +122,7 @@ async def fetch_city_data(city_name: str):
     Geocode a city name to coordinates, state and IANA timezone string.
     Uses the Open-Meteo geocoding API (no API key required).
 
-    Returns: (lat, lng, state, timezone_str)
+    Returns: (lat, lng, state, timezone_str, city_resolved)
     Raises ValueError for unknown/ambiguous city.
     """
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1"
@@ -125,7 +142,8 @@ async def fetch_city_data(city_name: str):
     lng = r["longitude"]
     state = r.get("admin1") or r.get("country", "")
     timezone_str = r.get("timezone", "UTC")
-    return lat, lng, state, timezone_str
+    city_resolved = r.get("name", city_name)
+    return lat, lng, state, timezone_str, city_resolved
 
 
 async def fetch_weather_data(lat: float, lng: float) -> dict:
@@ -293,3 +311,115 @@ def calculate_engineered_features(base_feats: dict) -> dict:
         "PoorVisibility_Rain":     poor_vis_rain,
         "RushHour_Junction":       rush_jn,
     }
+
+
+def _recompute_temporal_derivatives(feats: dict) -> None:
+    """Re-derive temporal flags after Hour/Weekday/Month overrides."""
+    h = int(feats["Hour"])
+    wd = int(feats["Weekday"])
+    m = int(feats["Month"])
+
+    feats["Is_Weekend"] = 1 if wd >= 5 else 0
+    feats["Is_Rush_Hour"] = 1 if (7 <= h <= 9) or (16 <= h <= 18) else 0
+    feats["Season_Spring"] = 1 if m in (3, 4, 5) else 0
+    feats["Season_Summer"] = 1 if m in (6, 7, 8) else 0
+    feats["Season_Fall"] = 1 if m in (9, 10, 11) else 0
+    feats["TOD_Morning"] = 1 if 6 <= h < 12 else 0
+    feats["TOD_Afternoon"] = 1 if 12 <= h < 18 else 0
+    feats["TOD_Evening"] = 1 if 18 <= h < 22 else 0
+
+
+def _validate_base_features(feature_dict: dict) -> None:
+    """Ensure exactly the 47 non-spatial model keys are present."""
+    keys = set(feature_dict.keys())
+    expected = set(NON_SPATIAL_FEATURES)
+    if keys != expected:
+        missing = sorted(expected - keys)
+        extra = sorted(keys - expected)
+        raise KeyError(
+            f"Expected exactly 47 base features; missing={missing}, extra={extra}"
+        )
+    if len(feature_dict) != 47:
+        raise ValueError(f"Expected exactly 47 base features, got {len(feature_dict)}")
+
+
+async def build_city_feature_dict(
+    city_name: str,
+    advanced_options: dict | None = None,
+) -> tuple[dict, dict]:
+    """
+    Orchestrate city geocoding, live weather, local time, and feature assembly.
+
+    Returns:
+        (feature_dict, metadata) where feature_dict has exactly 47 non-spatial
+        keys ready for LeakageFreeInferencePipeline.predict(), and metadata
+        carries resolved location/time/weather context for the API response.
+
+    Coordinate limitation:
+        Geocoding provides representative city-center coordinates from Open-Meteo,
+        not an exact accident-road location. Spatial features derived downstream
+        by the inference pipeline are approximate at the city level.
+    """
+    try:
+        lat, lng, state, timezone_str, city_resolved = await fetch_city_data(city_name)
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(
+            f"Geocoding service error (HTTP {e.response.status_code})."
+        ) from e
+    except httpx.RequestError as e:
+        raise RuntimeError(f"Geocoding service unavailable: {e}") from e
+
+    try:
+        tz = pytz.timezone(timezone_str)
+    except pytz.UnknownTimeZoneError:
+        tz = pytz.UTC
+
+    local_dt = datetime.datetime.now(tz)
+
+    try:
+        weather = await fetch_weather_data(lat, lng)
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(
+            f"Live weather unavailable (HTTP {e.response.status_code})."
+        ) from e
+    except httpx.RequestError as e:
+        raise RuntimeError(f"Live weather service unavailable: {e}") from e
+
+    base = {
+        "Start_Lat": lat,
+        "Start_Lng": lng,
+        "City": city_name,
+        "State": state,
+        **DEFAULTS.copy(),
+        **weather,
+    }
+    base.update(derive_time_features(local_dt))
+
+    if advanced_options:
+        for key, value in advanced_options.items():
+            if value is not None:
+                base[key] = value
+        _recompute_temporal_derivatives(base)
+
+    base.update(calculate_engineered_features(base))
+
+    feature_dict = {key: base[key] for key in NON_SPATIAL_FEATURES}
+    _validate_base_features(feature_dict)
+
+    metadata = {
+        "city_resolved": city_resolved,
+        "state_resolved": state,
+        "local_time": local_dt.isoformat(),
+        "weather_context": {
+            "temperature_f": weather["Temperature(F)"],
+            "humidity_percent": weather["Humidity(%)"],
+            "condition": weather["Weather_Condition"],
+            "wind_speed_mph": weather["Wind_Speed(mph)"],
+        },
+        "coordinate_note": (
+            "Geocoding provides representative city-center coordinates, "
+            "not an exact accident-road location. Spatial features are "
+            "approximate at the city level."
+        ),
+    }
+    return feature_dict, metadata
