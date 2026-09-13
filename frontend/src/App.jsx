@@ -13,8 +13,8 @@ import SHAPExplanation from './components/SHAPExplanation';
 import ModelIntelligenceSection from './components/ModelIntelligenceSection';
 import ValidationSection from './components/ValidationSection';
 import SystemStatus from './components/SystemStatus';
-import { checkHealth, predictSeverity, predictByCity } from './services/api';
-import { LayoutDashboard } from 'lucide-react';
+import { checkHealth, predictByCity } from './services/api';
+import { AlertTriangle, CloudSun, LayoutDashboard, Sparkles } from 'lucide-react';
 
 function App() {
   const [health, setHealth] = useState({ status: 'checking' });
@@ -48,12 +48,15 @@ function App() {
       }, 100);
     } catch (err) {
       console.error("Prediction failed:", err);
-      if (err.response?.status === 503) {
+      const message = err?.message || '';
+      if (message.includes('Live weather unavailable')) {
+        setError("Live weather data is temporarily unavailable. Please try again shortly.");
+      } else if (err.response?.status === 503) {
         setError("Prediction server unavailable. The inference pipeline may not be loaded.");
       } else if (err.response?.status === 422) {
         setError("Validation error. Please check your inputs.");
       } else if (!err.response) {
-        setError("Prediction server unavailable. Please start the FastAPI backend and try again.");
+        setError("We could not complete the analysis right now. Please try again shortly.");
       } else {
         setError("Prediction service encountered an error. Please try again.");
       }
@@ -68,80 +71,80 @@ function App() {
       
       <main className="flex-grow">
         <HeroSection />
-        <ProblemSection />
-        <PipelineSection />
-        <SpatialIntelligenceSection />
-        <DataCredibilitySection />
-
-        <section id="analyze" className="py-24 bg-slate-100 border-b border-slate-200">
+        <section id="analyze" className="py-16 sm:py-24 bg-slate-100 border-y border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Analyze Accident Severity</h2>
+            <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-800">
+                <Sparkles className="h-3.5 w-3.5" /> Live ML analysis
+              </div>
+              <h2 className="mt-4 text-3xl font-bold text-slate-950 tracking-tight sm:text-4xl">Traffic Accident Severity Analysis</h2>
               <p className="mt-4 text-lg text-slate-600 leading-relaxed">
-                Enter a city. The system will automatically resolve the location, fetch live conditions,
-                and estimate accident severity under current context.
+                Enter a city to combine current environmental conditions with the trained severity model.
               </p>
               <p className="mt-2 text-sm text-slate-400 italic">
-                Estimated severity under current conditions — based on historical accident patterns, not a guaranteed future prediction.
+                This is an estimated severity under current conditions, based on historical patterns—not a guaranteed future outcome.
               </p>
             </div>
 
             {error && (
-              <div className="mb-8 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 flex items-center shadow-sm max-w-5xl mx-auto">
-                <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                <span className="font-semibold">{error}</span>
+              <div role="alert" className="mb-8 flex max-w-5xl mx-auto items-start rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950 shadow-sm">
+                <AlertTriangle className="mr-3 h-5 w-5 shrink-0 text-amber-600" />
+                <div>
+                  <p className="font-semibold">Analysis unavailable</p>
+                  <p className="mt-1 text-sm text-amber-800">{error}</p>
+                </div>
               </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto relative">
-              {/* Left Column: Form Wizard */}
-              <div className="lg:col-span-7 xl:col-span-8">
-                <AnalysisWizard onSubmit={handlePredict} onReset={() => setResult(null)} isLoading={isLoading} />
+            <div className={`grid grid-cols-1 gap-8 max-w-6xl mx-auto ${result ? 'xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : 'lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]'}`}>
+              <div>
+                <AnalysisWizard
+                  onSubmit={handlePredict}
+                  onReset={() => { setResult(null); setError(null); }}
+                  isLoading={isLoading}
+                />
               </div>
-              
-              {/* Right Column: Status & Results */}
-              <div className="lg:col-span-5 xl:col-span-4">
-                <div className="sticky top-28 space-y-8">
-                  <SystemStatus health={health} result={result} />
-                  
-                  {result ? (
-                    <div id="results-section" className="space-y-6 transition-opacity duration-500 ease-in-out opacity-100">
-                      <PredictionResult result={result} />
+              <div className="space-y-6">
+                {result ? (
+                  <div id="results-section" className="scroll-mt-24">
+                    <PredictionResult result={result} />
+                  </div>
+                ) : (
+                  <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+                    <div className="mb-4 rounded-2xl bg-blue-50 p-4 text-blue-500">
+                      {isLoading ? <CloudSun className="h-10 w-10 animate-pulse" /> : <LayoutDashboard className="h-10 w-10" />}
                     </div>
-                  ) : (
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 border-dashed p-10 flex flex-col items-center justify-center text-center h-[350px]">
-                      <div className="bg-slate-50 p-4 rounded-full mb-4 text-slate-300">
-                        <LayoutDashboard className="w-10 h-10" />
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-700">Ready to analyze</h3>
-                      <p className="text-sm text-slate-500 mt-2 max-w-xs">
-                        Complete the workflow and submit to generate the intelligence report.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                    <h3 className="text-lg font-bold text-slate-800">{isLoading ? 'Analyzing current conditions…' : 'Ready to analyze'}</h3>
+                    <p aria-live="polite" className="mt-2 max-w-xs text-sm leading-relaxed text-slate-500">
+                      {isLoading
+                        ? 'Retrieving live conditions, aligning city-local time, and estimating severity.'
+                        : 'Enter a city to see a live-context severity estimate and its model explanation.'}
+                    </p>
+                  </div>
+                )}
+                <SystemStatus health={health} result={result} />
               </div>
             </div>
 
-            {/* Extended Results: Charts & Spatial Data side-by-side */}
             {result && (
-              <div className="max-w-7xl mx-auto mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8 transition-opacity duration-700 ease-in-out opacity-100">
+              <div className="max-w-6xl mx-auto mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <ProbabilityChart probabilities={result.probabilities} />
                 <SpatialInfo spatialInfo={result.spatial_information} />
               </div>
             )}
 
-            {/* SHAP section breaks out full width below */}
             {result && result.shap_explanation && (
-              <div className="max-w-7xl mx-auto mt-8 transition-opacity duration-700 ease-in-out opacity-100">
+              <div className="max-w-6xl mx-auto mt-8">
                 <SHAPExplanation shapData={result.shap_explanation} />
               </div>
             )}
           </div>
         </section>
 
+        <ProblemSection />
+        <PipelineSection />
+        <SpatialIntelligenceSection />
+        <DataCredibilitySection />
         <ModelIntelligenceSection />
         <ValidationSection />
       </main>
