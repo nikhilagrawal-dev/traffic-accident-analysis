@@ -7,6 +7,7 @@ __pycache__/
 # Large ML artifacts
 models/*.pkl
 artifacts/*.csv
+!artifacts/train_dbscan_clusters.csv
 data/*.csv
 
 # Frontend

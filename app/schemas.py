@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 class PredictionRequest(BaseModel):
     # Core temporal/location base features
@@ -113,9 +113,30 @@ class PredictionResponse(BaseModel):
     probabilities: Dict[str, float]
     spatial_information: SpatialInformation
     shap_explanation: Optional[Dict] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class CityPredictionResponse(PredictionResponse):
     city_resolved: str
     state_resolved: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     local_time: str
     weather_context: WeatherContext
+
+class ClusterCenter(BaseModel):
+    cluster_id: int
+    hotspot_label: int
+    cluster_size: int
+    latitude: float
+    longitude: float
+    distance_km: float
+
+class NearbyClustersResponse(BaseModel):
+    center_latitude: float
+    center_longitude: float
+    radius_km: float
+    total_found: int
+    limit: int
+    clusters: List[ClusterCenter]
+    metadata: Dict[str, str]

@@ -9,6 +9,7 @@ import AnalysisWizard from './components/AnalysisWizard';
 import PredictionResult from './components/PredictionResult';
 import ProbabilityChart from './components/ProbabilityChart';
 import SpatialInfo from './components/SpatialInfo';
+import InteractiveCityMap from './components/InteractiveCityMap';
 import SHAPExplanation from './components/SHAPExplanation';
 import ModelIntelligenceSection from './components/ModelIntelligenceSection';
 import ValidationSection from './components/ValidationSection';
@@ -125,6 +126,12 @@ function App() {
                 <SystemStatus health={health} result={result} />
               </div>
             </div>
+
+            {result && (
+              <div className="max-w-6xl mx-auto mt-8">
+                <InteractiveCityMap result={result} isLoading={isLoading} />
+              </div>
+            )}
 
             {result && (
               <div className="max-w-6xl mx-auto mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">

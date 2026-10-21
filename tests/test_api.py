@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from app.main import app
+from unittest.mock import patch
 import pytest
 
 def test_predict_endpoint():
@@ -18,13 +19,26 @@ def test_predict_endpoint():
         "Intersection_Indicator": 0, "Night_Rain": 0, "Weekend_Night": 0, "PoorVisibility_Rain": 0,
         "RushHour_Junction": 0, "explain": True
     }
-    with TestClient(app) as client:
-        response = client.post("/predict", json=payload)
-        
-        print("STATUS:", response.status_code)
-        print("RESPONSE:", response.text)
-        assert response.status_code == 200
-        data = response.json()
-        assert "predicted_severity" in data
-        assert "spatial_information" in data
-        assert "shap_explanation" in data
+    with patch("app.main.LeakageFreeInferencePipeline") as MockPipeline:
+        mock_pipeline = MockPipeline.return_value
+        mock_pipeline.predict.return_value = {
+            "predicted_severity": 2,
+            "probabilities": {"1": 0.05, "2": 0.85, "3": 0.07, "4": 0.03},
+            "spatial_information": {
+                "local_accident_density": 10,
+                "hotspot_flag": 1,
+                "noise_flag": 0,
+                "cluster_size": 25,
+                "distance_to_cluster_center_km": 0.42,
+            },
+            "shap_explanation": {"base_value": 0.0, "feature_contributions": {}},
+        }
+        with TestClient(app) as client:
+            response = client.post("/predict", json=payload)
+            assert response.status_code == 200
+            data = response.json()
+            assert "predicted_severity" in data
+            assert "spatial_information" in data
+            assert "shap_explanation" in data
+            assert data["latitude"] == payload["Start_Lat"]
+            assert data["longitude"] == payload["Start_Lng"]

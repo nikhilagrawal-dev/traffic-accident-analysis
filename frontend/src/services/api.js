@@ -41,3 +41,35 @@ export const predictByCity = async (data) => {
     throw new Error('Network error or server is down');
   }
 };
+
+export const fetchNearbyClusters = async (latitude, longitude, radiusKm = 30.0, limit = 50) => {
+  const params = {
+    latitude,
+    longitude,
+    radius_km: radiusKm,
+    limit,
+  };
+
+  // When developing on localhost, use local FastAPI instance if available
+  // to prevent remote pre-deployment 404 logs
+  const isLocalhost = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  if (isLocalhost) {
+    try {
+      const localRes = await axios.get('http://127.0.0.1:8000/spatial/clusters', { params, timeout: 2500 });
+      return localRes.data;
+    } catch {
+      // Fallback to configured API_URL if local server is not responding
+    }
+  }
+
+  try {
+    const response = await api.get('/spatial/clusters', { params });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.detail || 'Failed to fetch spatial clusters');
+    }
+    throw new Error('Network error or server is down');
+  }
+};

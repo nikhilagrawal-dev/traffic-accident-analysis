@@ -25,8 +25,22 @@ MOCK_WEATHER = {
 
 @pytest.fixture
 def client():
-    with TestClient(app) as test_client:
-        yield test_client
+    with patch("app.main.LeakageFreeInferencePipeline") as MockPipeline:
+        mock_pipeline = MockPipeline.return_value
+        mock_pipeline.predict.return_value = {
+            "predicted_severity": 2,
+            "probabilities": {"1": 0.05, "2": 0.85, "3": 0.07, "4": 0.03},
+            "spatial_information": {
+                "local_accident_density": 10,
+                "hotspot_flag": 1,
+                "noise_flag": 0,
+                "cluster_size": 25,
+                "distance_to_cluster_center_km": 0.42,
+            },
+            "shap_explanation": {"base_value": 0.0, "feature_contributions": {}},
+        }
+        with TestClient(app) as test_client:
+            yield test_client
 
 
 @pytest.fixture(autouse=True)
@@ -52,6 +66,8 @@ async def test_build_city_feature_dict_has_exactly_47_base_features():
     assert feature_dict["State"] == "Pennsylvania"
     assert feature_dict["Start_Lat"] == MOCK_GEO[0]
     assert feature_dict["Start_Lng"] == MOCK_GEO[1]
+    assert metadata["latitude"] == MOCK_GEO[0]
+    assert metadata["longitude"] == MOCK_GEO[1]
     assert "coordinate_note" in metadata
     assert "city-center" in metadata["coordinate_note"]
 
@@ -174,6 +190,8 @@ def test_predict_by_city_endpoint(client):
 
     assert data["city_resolved"] == "Philadelphia"
     assert data["state_resolved"] == "Pennsylvania"
+    assert data["latitude"] == MOCK_GEO[0]
+    assert data["longitude"] == MOCK_GEO[1]
     assert data["local_time"]
     assert data["weather_context"]["condition"] == "Clear"
     assert data["weather_context"]["temperature_f"] == 72.0

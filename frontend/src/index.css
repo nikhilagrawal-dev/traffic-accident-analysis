@@ -3,3 +3,32 @@
 body {
   @apply bg-slate-50 text-slate-900;
 }
+
+/* Leaflet Popup & Marker Polish */
+.leaflet-popup-content-wrapper {
+  border-radius: 1rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-tip {
+  background: #ffffff !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+.leaflet-container {
+  font-family: inherit !important;
+}
+
+.custom-severity-marker,
+.custom-cluster-marker {
+  background: transparent !important;
+  border: none !important;
+}

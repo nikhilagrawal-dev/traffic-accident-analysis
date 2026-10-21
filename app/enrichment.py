@@ -611,6 +611,8 @@ async def build_city_feature_dict(
     metadata = {
         "city_resolved": city_resolved,
         "state_resolved": state,
+        "latitude": lat,
+        "longitude": lng,
         "local_time": local_dt.isoformat(),
         "weather_context": {
             "temperature_f": weather["Temperature(F)"],

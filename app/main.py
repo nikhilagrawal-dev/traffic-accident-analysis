@@ -1,13 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from .schemas import (
     PredictionRequest,
     PredictionResponse,
     CityPredictionRequest,
     CityPredictionResponse,
+    NearbyClustersResponse,
 )
 from .inference import LeakageFreeInferencePipeline
 from .enrichment import build_city_feature_dict
+from .spatial import get_cluster_service
 import traceback
 from contextlib import asynccontextmanager
 
@@ -38,6 +40,10 @@ app.add_middleware(
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",
+        "http://127.0.0.1",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
         "https://traffic-accident-analysis-one.vercel.app",
     ],
     allow_credentials=True,
@@ -70,7 +76,11 @@ def predict(request: PredictionRequest):
             explain=explain
         )
 
-        return result
+        return {
+            **result,
+            "latitude": request.Start_Lat,
+            "longitude": request.Start_Lng,
+        }
 
     except Exception as e:
         raise HTTPException(
@@ -112,6 +122,8 @@ async def predict_by_city(request: CityPredictionRequest):
             **result,
             "city_resolved": metadata["city_resolved"],
             "state_resolved": metadata["state_resolved"],
+            "latitude": metadata["latitude"],
+            "longitude": metadata["longitude"],
             "local_time": metadata["local_time"],
             "weather_context": metadata["weather_context"],
         }
@@ -127,3 +139,28 @@ async def predict_by_city(request: CityPredictionRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/spatial/clusters", response_model=NearbyClustersResponse)
+def get_nearby_clusters(
+    latitude: float = Query(..., ge=-90.0, le=90.0, description="Latitude in decimal degrees"),
+    longitude: float = Query(..., ge=-180.0, le=180.0, description="Longitude in decimal degrees"),
+    radius_km: float = Query(30.0, gt=0.0, le=100.0, description="Search radius in kilometers"),
+    limit: int = Query(50, gt=0, le=200, description="Maximum number of cluster centers to return"),
+):
+    """
+    Retrieve genuine DBSCAN cluster centers near a geographic coordinate.
+
+    Queries the spatial BallTree index over training cluster centroids
+    (`train_dbscan_clusters.csv`) using the Haversine metric.
+    """
+    try:
+        service = get_cluster_service()
+        return service.get_nearby_clusters(
+            lat=latitude,
+            lng=longitude,
+            radius_km=radius_km,
+            limit=limit,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Spatial cluster query failed: {e}")
