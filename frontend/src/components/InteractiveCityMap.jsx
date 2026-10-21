@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -107,21 +107,33 @@ const createClusterPin = (clusterSize = 10) => {
   });
 };
 
-function MapViewController({ center, zoom, recenterTrigger }) {
+function MapViewController({ centerLat, centerLng, zoom = 11, recenterTrigger }) {
   const map = useMap();
+  const lastCenterRef = useRef(null);
+  const lastTriggerRef = useRef(recenterTrigger);
 
   useEffect(() => {
-    if (!center || !center[0] || !center[1]) return;
-    map.flyTo(center, zoom, {
-      duration: 1.2,
-      easeLinearity: 0.25,
-    });
-    // Invalidate size to prevent gray tiles on container layout transitions
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [map, center, zoom, recenterTrigger]);
+    if (typeof centerLat !== 'number' || typeof centerLng !== 'number' || isNaN(centerLat) || isNaN(centerLng)) {
+      return;
+    }
+
+    const coordsChanged =
+      !lastCenterRef.current ||
+      Math.abs(lastCenterRef.current.lat - centerLat) > 1e-6 ||
+      Math.abs(lastCenterRef.current.lng - centerLng) > 1e-6;
+
+    const userClickedRecenter = recenterTrigger !== lastTriggerRef.current && recenterTrigger > 0;
+    lastTriggerRef.current = recenterTrigger;
+
+    if (coordsChanged || userClickedRecenter) {
+      lastCenterRef.current = { lat: centerLat, lng: centerLng };
+      if (userClickedRecenter) {
+        map.flyTo([centerLat, centerLng], zoom, { duration: 0.8, easeLinearity: 0.25 });
+      } else {
+        map.flyTo([centerLat, centerLng], zoom, { duration: 1.0, easeLinearity: 0.25 });
+      }
+    }
+  }, [map, centerLat, centerLng, zoom, recenterTrigger]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -197,10 +209,14 @@ export default function InteractiveCityMap({ result, isLoading }) {
   // 1. Direct coordinates from backend response (sync, zero delay)
   const backendLat = typeof result?.latitude === 'number' ? result.latitude : (typeof result?.Start_Lat === 'number' ? result.Start_Lat : null);
   const backendLng = typeof result?.longitude === 'number' ? result.longitude : (typeof result?.Start_Lng === 'number' ? result.Start_Lng : null);
-  const backendCoords = (backendLat !== null && backendLng !== null) ? { lat: backendLat, lng: backendLng } : null;
 
-  // Active resolved coordinates
-  const resolvedCoords = backendCoords || fallbackCoords;
+  // Active resolved coordinates (memoized to prevent re-creation on every render)
+  const resolvedCoords = useMemo(() => {
+    if (backendLat !== null && backendLng !== null) {
+      return { lat: backendLat, lng: backendLng };
+    }
+    return fallbackCoords;
+  }, [backendLat, backendLng, fallbackCoords]);
 
   // 2. Fallback resolution via verified Open-Meteo geocoding API only when backend coords are missing
   const resolveFallbackCoordinates = useCallback(() => {
@@ -267,12 +283,20 @@ export default function InteractiveCityMap({ result, isLoading }) {
     }
   }, [showClusters, resolvedCoords, loadNearbyClusters]);
 
-  // Open marker popup automatically on coordinate resolution
+  // Open marker popup once per new city coordinate resolution, not on every render
+  const lastOpenedCoordRef = useRef(null);
   useEffect(() => {
-    if (markerRef.current && resolvedCoords) {
+    if (!markerRef.current || !resolvedCoords) return;
+    const isNewCity =
+      !lastOpenedCoordRef.current ||
+      Math.abs(lastOpenedCoordRef.current.lat - resolvedCoords.lat) > 1e-6 ||
+      Math.abs(lastOpenedCoordRef.current.lng - resolvedCoords.lng) > 1e-6;
+
+    if (isNewCity) {
+      lastOpenedCoordRef.current = { lat: resolvedCoords.lat, lng: resolvedCoords.lng };
       const timer = setTimeout(() => {
         try {
-          markerRef.current.openPopup();
+          markerRef.current?.openPopup();
         } catch {
           // popup could be closed or unmounted
         }
@@ -305,7 +329,7 @@ export default function InteractiveCityMap({ result, isLoading }) {
   const markerIcon = createSeverityPin(predictedSeverity);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col transition-all">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col transition-shadow">
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center space-x-3">
@@ -452,7 +476,7 @@ export default function InteractiveCityMap({ result, isLoading }) {
             maxZoom={18}
           />
           <ZoomControl position="bottomright" />
-          <MapViewController center={center} zoom={11} recenterTrigger={recenterTrigger} />
+          <MapViewController centerLat={resolvedCoords.lat} centerLng={resolvedCoords.lng} zoom={11} recenterTrigger={recenterTrigger} />
 
           {/* Primary City Center Marker */}
           <Marker
@@ -460,7 +484,7 @@ export default function InteractiveCityMap({ result, isLoading }) {
             icon={markerIcon}
             ref={markerRef}
           >
-            <Popup className="custom-leaflet-popup" minWidth={260} maxWidth={320}>
+            <Popup className="custom-leaflet-popup" minWidth={260} maxWidth={320} autoPan={false}>
               <div className="p-1 space-y-3 font-sans">
                 {/* Popup Header */}
                 <div className="border-b border-slate-100 pb-2">
