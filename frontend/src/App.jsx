@@ -12,6 +12,7 @@ import SpatialInfo from './components/SpatialInfo';
 import SHAPExplanation from './components/SHAPExplanation';
 import ModelIntelligenceSection from './components/ModelIntelligenceSection';
 import ValidationSection from './components/ValidationSection';
+import AccidentHeatMap from './components/AccidentHeatMap';
 import SystemStatus from './components/SystemStatus';
 import { checkHealth, predictByCity } from './services/api';
 import { AlertTriangle, CloudSun, LayoutDashboard, Sparkles } from 'lucide-react';
@@ -125,6 +126,12 @@ function App() {
                 <SystemStatus health={health} result={result} />
               </div>
             </div>
+
+            {result && (
+              <div id="heatmap-section" className="max-w-6xl mx-auto mt-8">
+                <AccidentHeatMap result={result} />
+              </div>
+            )}
 
             {result && (
               <div className="max-w-6xl mx-auto mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -23,6 +23,7 @@ from email.utils import parsedate_to_datetime
 import pytz
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 import httpx
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -228,6 +229,58 @@ async def fetch_city_data(city_name: str):
     return result
 
 
+async def _fetch_open_meteo_weather(lat: float, lng: float) -> dict:
+    """Fetch live weather from Open-Meteo without requiring an API key."""
+    url = (
+        "https://api.open-meteo.com/v1/forecast"
+        f"?latitude={lat}&longitude={lng}"
+        "&current=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,wind_direction_10m,precipitation,weather_code"
+        "&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch"
+    )
+    data = await _get_json_with_retry(url)
+    curr = data.get("current", {})
+    temp_f = float(curr.get("temperature_2m", 68.0))
+    humidity = float(curr.get("relative_humidity_2m", 50.0))
+    pressure_hpa = float(curr.get("surface_pressure", 1013.25))
+    pressure_in = pressure_hpa * 0.02953
+    wind_mph = float(curr.get("wind_speed_10m", 5.0))
+    wind_deg = float(curr.get("wind_direction_10m", 0.0))
+    wind_dir = _wind_degrees_to_label(wind_deg)
+    precip_in = float(curr.get("precipitation", 0.0))
+    wcode = int(curr.get("weather_code", 0))
+
+    if wcode == 0:
+        weather_cond = "Clear"
+    elif wcode in (1, 2):
+        weather_cond = "Partly Cloudy"
+    elif wcode == 3:
+        weather_cond = "Cloudy"
+    elif wcode in (45, 48):
+        weather_cond = "Fog"
+    elif wcode in (51, 53, 55, 61, 63, 65, 80, 81, 82):
+        weather_cond = "Rain"
+    elif wcode in (71, 73, 75, 77, 85, 86):
+        weather_cond = "Snow"
+    elif wcode in (95, 96, 99):
+        weather_cond = "Thunderstorm"
+    else:
+        weather_cond = "Fair"
+
+    vis_mi = 5.0 if weather_cond in ("Fog", "Snow") else (7.0 if weather_cond == "Rain" else 10.0)
+
+    return {
+        "Temperature(F)": temp_f,
+        "Humidity(%)": humidity,
+        "Pressure(in)": pressure_in,
+        "Visibility(mi)": vis_mi,
+        "Wind_Speed(mph)": wind_mph,
+        "Precipitation(in)": precip_in,
+        "Wind_Direction": wind_dir,
+        "Weather_Condition": weather_cond,
+        "Is_Night": 0,
+    }
+
+
 async def fetch_weather_data(lat: float, lng: float) -> dict:
     """
     Fetch current weather from OpenWeather and return the exact
@@ -259,19 +312,24 @@ async def fetch_weather_data(lat: float, lng: float) -> dict:
     api_key = os.getenv("OPENWEATHER_API_KEY")
 
     if not api_key:
-        raise RuntimeError(
-            "OPENWEATHER_API_KEY is not configured."
+        result = await _fetch_open_meteo_weather(lat, lng)
+        _weather_cache[cache_key] = (time.monotonic(), result)
+        return result.copy()
+
+    try:
+        url = (
+            "https://api.openweathermap.org/data/2.5/weather"
+            f"?lat={lat}"
+            f"&lon={lng}"
+            "&units=imperial"
+            f"&appid={api_key}"
         )
 
-    url = (
-        "https://api.openweathermap.org/data/2.5/weather"
-        f"?lat={lat}"
-        f"&lon={lng}"
-        "&units=imperial"
-        f"&appid={api_key}"
-    )
-
-    data = await _get_json_with_retry(url)
+        data = await _get_json_with_retry(url)
+    except Exception:
+        result = await _fetch_open_meteo_weather(lat, lng)
+        _weather_cache[cache_key] = (time.monotonic(), result)
+        return result.copy()
 
     main = data["main"]
     wind = data.get("wind", {})
@@ -611,6 +669,8 @@ async def build_city_feature_dict(
     metadata = {
         "city_resolved": city_resolved,
         "state_resolved": state,
+        "latitude": float(lat),
+        "longitude": float(lng),
         "local_time": local_dt.isoformat(),
         "weather_context": {
             "temperature_f": weather["Temperature(F)"],

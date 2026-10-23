@@ -21,8 +21,11 @@ class LeakageFreeInferencePipeline:
             self.model = pickle.load(f)
             
         # 2. Load feature schema
-        with open(self.artifacts_dir / "feature_list_leakage_free.json", "r") as f:
-            self.feature_schema = json.load(f)["all_features"]
+        if hasattr(self.model, "feature_names_in_"):
+            self.feature_schema = list(self.model.feature_names_in_)
+        else:
+            with open(self.artifacts_dir / "feature_list_leakage_free.json", "r") as f:
+                self.feature_schema = json.load(f)["all_features"]
             
         # 3. Load frequency encoders
         with open(self.artifacts_dir / "frequency_encoders.pkl", "rb") as f:
@@ -96,6 +99,7 @@ class LeakageFreeInferencePipeline:
             
         return {
             "Local_Accident_Density": density,
+            "Hotspot_Label": int(assigned_label),
             "Hotspot_Flag": hotspot_flag,
             "Noise_Flag": noise_flag,
             "Cluster_Size": cluster_size,
@@ -111,13 +115,13 @@ class LeakageFreeInferencePipeline:
         
         req_encoded.update(spatial_feats)
         
-        # 10. Construct exactly 52 features in exact order
+        # 10. Construct features in exact order expected by model
         row_data = {feat: req_encoded[feat] for feat in self.feature_schema}
         
         df = pd.DataFrame([row_data])
         
         # 11. Enforce exact feature order
-        assert len(df.columns) == 52, "Must have exactly 52 features"
+        assert len(df.columns) == len(self.feature_schema), f"Expected {len(self.feature_schema)} features, got {len(df.columns)}"
         assert df.columns.tolist() == self.feature_schema, "Feature order mismatch"
         assert df.isnull().sum().sum() == 0, "Missing values not allowed"
         

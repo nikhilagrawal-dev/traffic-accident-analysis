@@ -1,4 +1,6 @@
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI, HTTPException
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 from .schemas import (
     PredictionRequest,
@@ -8,6 +10,8 @@ from .schemas import (
 )
 from .inference import LeakageFreeInferencePipeline
 from .enrichment import build_city_feature_dict
+from .map_service import get_accident_map_data
+from typing import Optional
 import traceback
 from contextlib import asynccontextmanager
 
@@ -108,12 +112,23 @@ async def predict_by_city(request: CityPredictionRequest):
 
         result = pipeline.predict(feature_dict, explain=request.explain)
 
+        map_data = get_accident_map_data(
+            city=metadata.get("city_resolved", request.city),
+            state=metadata.get("state_resolved"),
+            lat=metadata.get("latitude"),
+            lng=metadata.get("longitude"),
+            limit=1500
+        )
+
         return {
             **result,
             "city_resolved": metadata["city_resolved"],
             "state_resolved": metadata["state_resolved"],
+            "latitude": metadata.get("latitude"),
+            "longitude": metadata.get("longitude"),
             "local_time": metadata["local_time"],
             "weather_context": metadata["weather_context"],
+            "map_data": map_data,
         }
 
     except ValueError as e:
@@ -127,3 +142,24 @@ async def predict_by_city(request: CityPredictionRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/accidents-map")
+def accidents_map(
+    city: str,
+    state: Optional[str] = None,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    limit: int = 1500
+):
+    """
+    Get nearby historical accident records and heatmap points for an analyzed city or coordinates.
+    """
+    return get_accident_map_data(
+        city=city,
+        state=state,
+        lat=lat,
+        lng=lng,
+        limit=limit
+    )
+

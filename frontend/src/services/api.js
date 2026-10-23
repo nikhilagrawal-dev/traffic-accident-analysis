@@ -41,3 +41,18 @@ export const predictByCity = async (data) => {
     throw new Error('Network error or server is down');
   }
 };
+
+export const fetchAccidentsMap = async (city, state = null, lat = null, lng = null) => {
+  try {
+    const params = { city };
+    if (state) params.state = state;
+    if (lat != null) params.lat = lat;
+    if (lng != null) params.lng = lng;
+    const response = await api.get('/accidents-map', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch accident map data:', error);
+    return null;
+  }
+};
+

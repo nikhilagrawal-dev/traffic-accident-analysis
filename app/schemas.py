@@ -1,5 +1,6 @@
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 class PredictionRequest(BaseModel):
     # Core temporal/location base features
@@ -117,5 +118,9 @@ class PredictionResponse(BaseModel):
 class CityPredictionResponse(PredictionResponse):
     city_resolved: str
     state_resolved: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     local_time: str
     weather_context: WeatherContext
+    map_data: Optional[Dict[str, Any]] = None
+
